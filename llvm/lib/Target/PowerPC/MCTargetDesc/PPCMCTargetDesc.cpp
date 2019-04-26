@@ -15,6 +15,7 @@
 #include "InstPrinter/PPCInstPrinter.h"
 #include "MCTargetDesc/PPCMCAsmInfo.h"
 #include "PPCTargetStreamer.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -35,8 +36,6 @@
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
-
-#include <set>
 
 using namespace llvm;
 
@@ -185,14 +184,12 @@ public:
   void emitAssignment(MCSymbol *S, const MCExpr *Value) override {
     auto *Symbol = cast<MCSymbolELF>(S);
 
-    auto I = UpdateOther.find(Symbol);
-    if (I != UpdateOther.end())
-      UpdateOther.erase(I);
-
     // When encoding an assignment to set symbol A to symbol B, also copy
     // the st_other bits encoding the local entry point offset.
     if (copyLocalEntry(Symbol, Value))
       UpdateOther.insert(Symbol);
+    else
+      UpdateOther.erase(Symbol);
   }
 
   void finish() override {
@@ -201,13 +198,13 @@ public:
   }
 
 private:
-  std::set<MCSymbolELF *> UpdateOther;
+  SmallPtrSet<MCSymbolELF *, 32> UpdateOther;
 
   bool copyLocalEntry(MCSymbolELF *D, const MCExpr *S) {
-    if (S->getKind() != MCExpr::SymbolRef)
+    auto *Ref = dyn_cast<const MCSymbolRefExpr>(S);
+    if (!Ref)
       return false;
-    const auto &RhsSym =
-        cast<MCSymbolELF>(static_cast<const MCSymbolRefExpr *>(S)->getSymbol());
+    const auto &RhsSym = cast<MCSymbolELF>(Ref->getSymbol());
     unsigned Other = D->getOther();
     Other &= ~ELF::STO_PPC64_LOCAL_MASK;
     Other |= RhsSym.getOther() & ELF::STO_PPC64_LOCAL_MASK;
