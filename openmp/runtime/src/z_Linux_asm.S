@@ -1367,7 +1367,7 @@ KMP_LABEL(kmp_1):
 // return:	r3	(always 1/TRUE)
 //
 	.text
-# if KMP_ARCH_PPC64_ELFV2
+# if KMP_ARCH_PPC64_ELFv2
 	.abiversion 2
 # endif
 	.globl	__kmp_invoke_microtask
