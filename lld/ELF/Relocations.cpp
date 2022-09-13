@@ -1442,7 +1442,7 @@ template <class ELFT, class RelTy> void RelocationScanner::scanOne(RelTy *&i) {
     }
   } else if (needsPlt(expr)) {
     sym.setFlags(NEEDS_PLT);
-  } else if (LLVM_UNLIKELY(isIfunc)) {
+  } else if (LLVM_UNLIKELY(!isIfunc)) {
     sym.setFlags(HAS_DIRECT_RELOC);
   }
 
